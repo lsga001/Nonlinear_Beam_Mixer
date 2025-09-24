@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.6
 
 using Markdown
 using InteractiveUtils
@@ -13,6 +13,7 @@ begin
 	using LinearAlgebra
 	using Match
 	using LaTeXStrings
+	using Random
 end
 
 # ╔═╡ a64a74e9-d5eb-478f-803a-61c94c14fbc6
@@ -250,11 +251,12 @@ end
 
 # ╔═╡ 6448d957-5f6f-4707-90ce-e270ccd3fc58
 begin
+	Random.seed!(1234)
 	# Numerical window
 	N = 2^8;
-	beam_width = 0.5e-3;
-	xv = 3*beam_width*range(-1,1,length=N);
-	yv = 3*beam_width*range(-1,1,length=N);
+	source_width = 0.5e-3;
+	xv = 3*source_width*range(-1,1,length=N);
+	yv = 3*source_width*range(-1,1,length=N);
 	zc = 50e-2;
 	
 	# Parameters
@@ -271,11 +273,21 @@ begin
 
 	# Ensemble behavior
 	num_instances = 300;
+
+	rₒ₁ = source_width*sqrt.(rand(num_instances));
+	rₒ₂ = source_width*sqrt.(rand(num_instances));
+	θₒ₁ = 2*pi*rand(num_instances);
+	θₒ₂ = 2*pi*rand(num_instances);
+
+	xₒ₁ = rₒ₁ .* cos.(θₒ₁);
+	xₒ₂ = rₒ₂ .* cos.(θₒ₂);
+	yₒ₁ = rₒ₁ .* sin.(θₒ₁);
+	yₒ₂ = rₒ₂ .* sin.(θₒ₂);
 	
-	xₒ₁ = beam_width*randn(num_instances);
-	xₒ₂ = beam_width*randn(num_instances);
-	yₒ₁ = beam_width*randn(num_instances);
-	yₒ₂ = beam_width*randn(num_instances);
+	#xₒ₁ = source_width*randn(num_instances);
+	#xₒ₂ = source_width*randn(num_instances);
+	#yₒ₁ = source_width*randn(num_instances);
+	#yₒ₂ = source_width*randn(num_instances);
 
 	# Initialization
 	U₁_amplitude = 0*xv*yv';
@@ -361,6 +373,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Match = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 StructuredLight = "13204c95-a6e5-4c09-8c7b-ee09b09e0944"
 
@@ -377,9 +390,9 @@ StructuredLight = "~0.6.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.6"
+julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "632c057a8b0067dd972b9e60d6e4b14ada0c09c5"
+project_hash = "01831579ba06020104895596caeef287d0aacba4"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -526,9 +539,9 @@ version = "0.10.0"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
-git-tree-sha1 = "37ea44092930b1811e666c3bc38065d7d87fcc74"
+git-tree-sha1 = "64e15186f0aa277e174aa81798f7eb8598e0157e"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
-version = "0.13.1"
+version = "0.13.0"
 
 [[deps.CommonSolve]]
 git-tree-sha1 = "0eee5eb66b1cf62cd6ad1b460238e60e4b09400c"
@@ -706,15 +719,15 @@ version = "3.4.0+2"
 
 [[deps.GR]]
 deps = ["Artifacts", "Base64", "DelimitedFiles", "Downloads", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Preferences", "Printf", "Qt6Wayland_jll", "Random", "Serialization", "Sockets", "TOML", "Tar", "Test", "p7zip_jll"]
-git-tree-sha1 = "4424dca1462cc3f19a0e6f07b809ad948ac1d62b"
+git-tree-sha1 = "7ffa4049937aeba2e5e1242274dc052b0362157a"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.73.16"
+version = "0.73.14"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "FreeType2_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Qt6Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "d7ecfaca1ad1886de4f9053b5b8aef34f36ede7f"
+git-tree-sha1 = "98fc192b4e4b938775ecd276ce88f539bcec358e"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.73.16+0"
+version = "0.73.14+0"
 
 [[deps.Gettext_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
@@ -1066,9 +1079,9 @@ version = "0.8.5+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "f1a7e086c677df53e064e0fdd2c9d0b0833e3f6e"
+git-tree-sha1 = "38cb508d080d21dc1128f7fb04f20387ed4c0af4"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.5.0"
+version = "1.4.3"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1083,9 +1096,9 @@ uuid = "91d4177d-7536-5919-b921-800302f37372"
 version = "1.3.3+0"
 
 [[deps.OrderedCollections]]
-git-tree-sha1 = "05868e21324cede2207c6f0f466b4bfef6d5e7ee"
+git-tree-sha1 = "cc4054e898b852042d7b503313f7ad03de99c3dd"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-version = "1.8.1"
+version = "1.8.0"
 
 [[deps.PCRE2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1181,27 +1194,27 @@ version = "1.3.0"
 
 [[deps.Qt6Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Vulkan_Loader_jll", "Xorg_libSM_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_cursor_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "libinput_jll", "xkbcommon_jll"]
-git-tree-sha1 = "eb38d376097f47316fe089fc62cb7c6d85383a52"
+git-tree-sha1 = "492601870742dcd38f233b23c3ec629628c1d724"
 uuid = "c0090381-4147-56d7-9ebc-da0b1113ec56"
-version = "6.8.2+1"
+version = "6.7.1+1"
 
 [[deps.Qt6Declarative_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll", "Qt6ShaderTools_jll"]
-git-tree-sha1 = "da7adf145cce0d44e892626e647f9dcbe9cb3e10"
+git-tree-sha1 = "e5dd466bf2569fe08c91a2cc29c1003f4797ac3b"
 uuid = "629bc702-f1f5-5709-abd5-49b8460ea067"
-version = "6.8.2+1"
+version = "6.7.1+2"
 
 [[deps.Qt6ShaderTools_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll"]
-git-tree-sha1 = "9eca9fc3fe515d619ce004c83c31ffd3f85c7ccf"
+git-tree-sha1 = "1a180aeced866700d4bebc3120ea1451201f16bc"
 uuid = "ce943373-25bb-56aa-8eca-768745ed7b5a"
-version = "6.8.2+1"
+version = "6.7.1+1"
 
 [[deps.Qt6Wayland_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Qt6Base_jll", "Qt6Declarative_jll"]
-git-tree-sha1 = "2766344a35a1a5ec1147305c4b343055d7c22c90"
+git-tree-sha1 = "729927532d48cf79f49070341e1d918a65aba6b0"
 uuid = "e99dba38-086e-5de3-a5b1-6e4c66e897c3"
-version = "6.8.2+0"
+version = "6.7.1+1"
 
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]

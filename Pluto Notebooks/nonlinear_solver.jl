@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.6
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -224,9 +224,9 @@ md"""
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
 	x0, y0, z0 = origin;
-	#r = norm([x-x0, y-y0, z-z0]);
-	#return exp(-im*k*r)/r
-	return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))#/(z-z0)
+	r = norm([x-x0, y-y0, z-z0]);
+	return exp(-im*k*r)/r
+	#return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))#/(z-z0)
 end
 
 # ╔═╡ db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
@@ -241,7 +241,7 @@ function beam_generation(xv, yv, z, position_pair, input_wavelength_pair)
 	k₂ = 2*π/U₂_wavelength;
 	
 	U₁_amplitude = spherical_beam.(xv, yv', z, Ref(U₁_origin), k₁);
-	U₂_amplitude = 1e5*spherical_beam.(xv, yv', z, Ref(U₂_origin), k₂);
+	U₂_amplitude = conj.(spherical_beam.(xv, yv', z, Ref(U₂_origin), k₂));
 	
 	U₁ = Beam(U₁_amplitude, U₁_wavelength);
 	U₂ = Beam(U₂_amplitude, U₂_wavelength);
@@ -255,8 +255,10 @@ begin
 	# Numerical window
 	N = 2^8;
 	source_width = 0.5e-3;
-	xv = 3*source_width*range(-1,1,length=N);
-	yv = 3*source_width*range(-1,1,length=N);
+	#xv = 4*source_width*range(-1,1,length=N);
+	#yv = 4*source_width*range(-1,1,length=N);
+	xv = 3e-3*range(-1,1,length=N);
+	yv = 3e-3*range(-1,1,length=N);
 	zc = 50e-2;
 	
 	# Parameters
@@ -272,17 +274,20 @@ begin
 	PPMgOLN_crystal = Crystal(PPMgOLN_d_eff, PPMgOLN_n_refraction, PPMgOLN_length);
 
 	# Ensemble behavior
-	num_instances = 300;
+	num_instances = 1000;
 
-	rₒ₁ = source_width*sqrt.(rand(num_instances));
-	rₒ₂ = source_width*sqrt.(rand(num_instances));
+	rₒ₁ = source_width * sqrt.(rand(num_instances));
+	rₒ₂ = source_width * sqrt.(rand(num_instances));
 	θₒ₁ = 2*pi*rand(num_instances);
 	θₒ₂ = 2*pi*rand(num_instances);
 
 	xₒ₁ = rₒ₁ .* cos.(θₒ₁);
-	xₒ₂ = rₒ₂ .* cos.(θₒ₂);
+	#xₒ₂ = rₒ₂ .* cos.(θₒ₂);
+	xₒ₂ = -xₒ₁;
 	yₒ₁ = rₒ₁ .* sin.(θₒ₁);
-	yₒ₂ = rₒ₂ .* sin.(θₒ₂);
+	#yₒ₂ = rₒ₂ .* sin.(θₒ₂);
+	yₒ₂ = -yₒ₁;
+
 	
 	#xₒ₁ = source_width*randn(num_instances);
 	#xₒ₂ = source_width*randn(num_instances);
@@ -320,6 +325,7 @@ begin
 	U₁ = Beam(U₁_amplitude, λ₁);
 	U₂ = Beam(U₂_amplitude, λ₂);
 	U₃ = Beam(U₃_amplitude, λ₃);
+
 end
 
 # ╔═╡ abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
@@ -341,9 +347,11 @@ md"""
 
 # ╔═╡ 887f855f-4d66-4efd-83e6-124e50889af7
 function plot_beam(U, xv, yv, my_title)
+	phase_color = :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256
+	#phase_color = :bamO
 	plot(
 		heatmap(xv, yv, abs2.(U.amplitude), aspect_ratio=:equal, title="Amplitude"), 
-		heatmap(xv, yv, angle.(U.amplitude), aspect_ratio=:equal, title="Phase", clims=(-pi,pi)),
+		heatmap(xv, yv, angle.(U.amplitude), aspect_ratio=:equal, title="Phase", clims=(-pi,pi), colormap=phase_color),
 		layout = @layout([B C]),
 		plot_title=my_title,
 		plot_titlevspan=0.1
@@ -390,7 +398,7 @@ StructuredLight = "~0.6.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.7"
+julia_version = "1.11.6"
 manifest_format = "2.0"
 project_hash = "01831579ba06020104895596caeef287d0aacba4"
 
@@ -1770,7 +1778,7 @@ version = "1.8.1+0"
 # ╟─9fa04509-0d35-4abd-b26b-ae554881582a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
 # ╟─13ff224b-781d-4452-a29d-c7cc95d78f15
-# ╟─5805c0b1-4277-47da-992e-8bc7f47e9191
+# ╠═5805c0b1-4277-47da-992e-8bc7f47e9191
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
 # ╟─c22c4017-12d4-4b29-8b27-443c40de5fb8
 # ╟─ef860f8e-40d5-41a0-a0c3-a9f453265568

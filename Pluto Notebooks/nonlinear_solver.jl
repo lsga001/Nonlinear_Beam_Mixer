@@ -224,9 +224,9 @@ md"""
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
 	x0, y0, z0 = origin;
-	r = norm([x-x0, y-y0, z-z0]);
-	return exp(-im*k*r)/r
-	#return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))#/(z-z0)
+	#r = norm([x-x0, y-y0, z-z0]);
+	#return exp(-im*k*r)/r
+	return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))#/(z-z0)
 end
 
 # ╔═╡ db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
@@ -255,15 +255,15 @@ begin
 	# Numerical window
 	N = 2^8;
 	source_width = 0.5e-3;
-	#xv = 4*source_width*range(-1,1,length=N);
-	#yv = 4*source_width*range(-1,1,length=N);
+	#xv = 3*source_width*range(-1,1,length=N);
+	#yv = 3*source_width*range(-1,1,length=N);
 	xv = 3e-3*range(-1,1,length=N);
 	yv = 3e-3*range(-1,1,length=N);
 	zc = 50e-2;
 	
 	# Parameters
-	λ₁ = 1.06e-6;
-	λ₂ = 1.06e-6;
+	λ₁ = 1310e-9;
+	λ₂ = 1310e-9;
 	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
 	input_wavelength_pair = [λ₁, λ₂];
 
@@ -1775,10 +1775,10 @@ version = "1.8.1+0"
 # ╟─673d87cd-f402-417a-b69c-5944ea1f86e8
 # ╠═6448d957-5f6f-4707-90ce-e270ccd3fc58
 # ╟─abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
-# ╟─9fa04509-0d35-4abd-b26b-ae554881582a
+# ╠═9fa04509-0d35-4abd-b26b-ae554881582a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
 # ╟─13ff224b-781d-4452-a29d-c7cc95d78f15
-# ╠═5805c0b1-4277-47da-992e-8bc7f47e9191
+# ╟─5805c0b1-4277-47da-992e-8bc7f47e9191
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
 # ╟─c22c4017-12d4-4b29-8b27-443c40de5fb8
 # ╟─ef860f8e-40d5-41a0-a0c3-a9f453265568

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.6
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -82,10 +82,11 @@ end;
   ╠═╡ =#
 
 # ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
-
-
-# ╔═╡ 8d6e234b-319d-439d-83b2-52187b498af7
-
+function generate_source_points(distribution_type="circular")
+	@match source_type begin
+		"circular" 		=> return circular_distribution()
+	end;
+end
 
 # ╔═╡ 4227a905-cb4e-40da-8b15-df73c9184480
 function filtering()
@@ -217,6 +218,34 @@ function PPMgOLN_n_refraction(lambda; temperature=25, axis="extraordinary")
 	return sqrt( a[1] + b[1]*f + (a[2]+b[2]*f)/(l^2 - (a[3]+b[3]*f)^2) + (a[4]+b[4]*f)/(l^2 - a[5]^2) - a[6]*l^2 )
 end
 
+# ╔═╡ 6448d957-5f6f-4707-90ce-e270ccd3fc58
+begin
+	Random.seed!(1234)
+	# Numerical window
+	N = 2^8;
+	source_width = 0.5e-3;
+	#xv = 3*source_width*range(-1,1,length=N);
+	#yv = 3*source_width*range(-1,1,length=N);
+	xv = 3e-3*range(-1,1,length=N);
+	yv = 3e-3*range(-1,1,length=N);
+	zc = 55e-2;
+	
+	# Parameters
+	λ₁ = 1310e-9;
+	λ₂ = 1310e-9;
+	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
+	input_wavelength_pair = [λ₁, λ₂];
+
+	# Periodically-poled MgO-coated Lithium Niobate (PPMgOLN)
+	# is a negative uniaxial crystal.
+	PPMgOLN_d_eff = 27e-12;
+	PPMgOLN_length = 5e-2;
+	PPMgOLN_crystal = Crystal(PPMgOLN_d_eff, PPMgOLN_n_refraction, PPMgOLN_length);
+
+	# Ensemble behavior
+	num_instances = 1000;
+end
+
 # ╔═╡ 1fd147f1-a50f-4ecc-b50a-5250140c2466
 md"""
 ### Coherence auxiliary code
@@ -255,33 +284,9 @@ function beam_generation(xv, yv, z, position_pair, input_wavelength_pair)
 	return U₁, U₂
 end
 
-# ╔═╡ 6448d957-5f6f-4707-90ce-e270ccd3fc58
+# ╔═╡ 8d6e234b-319d-439d-83b2-52187b498af7
 begin
-	Random.seed!(1234)
-	# Numerical window
-	N = 2^8;
-	source_width = 0.5e-3;
-	#xv = 3*source_width*range(-1,1,length=N);
-	#yv = 3*source_width*range(-1,1,length=N);
-	xv = 3e-3*range(-1,1,length=N);
-	yv = 3e-3*range(-1,1,length=N);
-	zc = 55e-2;
 	
-	# Parameters
-	λ₁ = 1310e-9;
-	λ₂ = 1310e-9;
-	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
-	input_wavelength_pair = [λ₁, λ₂];
-
-	# Periodically-poled MgO-coated Lithium Niobate (PPMgOLN)
-	# is a negative uniaxial crystal.
-	PPMgOLN_d_eff = 27e-12;
-	PPMgOLN_length = 5e-2;
-	PPMgOLN_crystal = Crystal(PPMgOLN_d_eff, PPMgOLN_n_refraction, PPMgOLN_length);
-
-	# Ensemble behavior
-	num_instances = 1000;
-
 	rₒ₁ = source_width * sqrt.(rand(num_instances));
 	rₒ₂ = source_width * sqrt.(rand(num_instances));
 	θₒ₁ = 2*pi*rand(num_instances);
@@ -320,9 +325,6 @@ begin
 		filtering();
 
 		## ensemble average
-		#U₁_amplitude += abs.(u₁.amplitude) / num_instances;
-		#U₂_amplitude += abs.(u₂.amplitude) / num_instances;
-		#U₃_amplitude += abs.(u₃.amplitude) / num_instances;
 		U₁_amplitude += u₁.amplitude / num_instances;
 		U₂_amplitude += u₂.amplitude / num_instances;
 		U₃_amplitude += u₃.amplitude / num_instances;
@@ -331,7 +333,6 @@ begin
 	U₁ = Beam(U₁_amplitude, λ₁);
 	U₂ = Beam(U₂_amplitude, λ₂);
 	U₃ = Beam(U₃_amplitude, λ₃);
-
 end
 
 # ╔═╡ abbd89d5-c7cc-4a3b-a84e-cd587e5ede46

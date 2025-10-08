@@ -81,6 +81,12 @@ begin
 end;
   ╠═╡ =#
 
+# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
+
+
+# ╔═╡ 8d6e234b-319d-439d-83b2-52187b498af7
+
+
 # ╔═╡ 4227a905-cb4e-40da-8b15-df73c9184480
 function filtering()
 end
@@ -259,7 +265,7 @@ begin
 	#yv = 3*source_width*range(-1,1,length=N);
 	xv = 3e-3*range(-1,1,length=N);
 	yv = 3e-3*range(-1,1,length=N);
-	zc = 50e-2;
+	zc = 55e-2;
 	
 	# Parameters
 	λ₁ = 1310e-9;
@@ -1774,6 +1780,8 @@ version = "1.8.1+0"
 # ╟─e0e37aed-2fc7-45e7-81f8-afc6a564ffda
 # ╟─673d87cd-f402-417a-b69c-5944ea1f86e8
 # ╠═6448d957-5f6f-4707-90ce-e270ccd3fc58
+# ╠═94e3db3c-4b2e-40c0-858b-49328b82d0ec
+# ╠═8d6e234b-319d-439d-83b2-52187b498af7
 # ╟─abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
 # ╠═9fa04509-0d35-4abd-b26b-ae554881582a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440

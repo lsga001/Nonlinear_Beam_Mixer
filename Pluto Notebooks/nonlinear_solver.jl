@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.8
+# v0.20.6
 
 using Markdown
 using InteractiveUtils
@@ -80,13 +80,6 @@ begin
 	output = nonlinear_beam_mixer_output(z, signal, pump, PPMgOLN_crystal, "strong_laser");
 end;
   ╠═╡ =#
-
-# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
-function generate_source_points(distribution_type="circular")
-	@match source_type begin
-		"circular" 		=> return circular_distribution()
-	end;
-end
 
 # ╔═╡ 4227a905-cb4e-40da-8b15-df73c9184480
 function filtering()
@@ -220,7 +213,6 @@ end
 
 # ╔═╡ 6448d957-5f6f-4707-90ce-e270ccd3fc58
 begin
-	Random.seed!(1234)
 	# Numerical window
 	N = 2^8;
 	source_width = 0.5e-3;
@@ -228,7 +220,7 @@ begin
 	#yv = 3*source_width*range(-1,1,length=N);
 	xv = 3e-3*range(-1,1,length=N);
 	yv = 3e-3*range(-1,1,length=N);
-	zc = 55e-2;
+	zc = 50e-2;
 	
 	# Parameters
 	λ₁ = 1310e-9;
@@ -244,6 +236,8 @@ begin
 
 	# Ensemble behavior
 	num_instances = 1000;
+	distribution_type = "circular";
+	source_type = "spherical";
 end
 
 # ╔═╡ 1fd147f1-a50f-4ecc-b50a-5250140c2466
@@ -256,16 +250,86 @@ md"""
 ### Beam generation auxiliary code
 """
 
+# ╔═╡ 6a2ae328-0c2d-4bd0-aafd-ee3e65c4dbdb
+function circular_distribution(source_width, num_instances)
+	Random.seed!(1234)
+	
+	r₁ = source_width * sqrt.(rand(num_instances));
+	r₂ = source_width * sqrt.(rand(num_instances));
+	θ₁ = 2*pi*rand(num_instances);
+	θ₂ = 2*pi*rand(num_instances);
+
+	x₁ = r₁ .* cos.(θ₁);
+	y₁ = r₁ .* sin.(θ₁);
+	
+	x₂ = -x₁;
+	y₂ = -y₁;
+
+	return x₁, y₁, x₂, y₂
+end
+
+# ╔═╡ 1e077657-a56f-44c6-a51a-494e77353f8c
+function gaussian_distribution(source_width, num_instances)
+	Random.seed!(1234)
+	
+	x₁ = source_width*randn(num_instances);
+	y₁ = source_width*randn(num_instances);
+
+	x₂ = -x₁;
+	y₂ = -y₁;
+	
+	return x₁, y₁, x₂, y₂
+end
+
+# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
+function generate_source_points(source_width, num_instances; distribution_type="circular")
+	@match distribution_type begin
+		"circular" 	=> return circular_distribution(source_width, num_instances)
+		"gaussian" 	=> return gaussian_distribution(source_width, num_instances)
+	end;
+end
+
+# ╔═╡ dad244a6-8fa2-4c02-8a55-14ccdef91a9c
+begin
+	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
+end
+
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
 	x0, y0, z0 = origin;
-	#r = norm([x-x0, y-y0, z-z0]);
-	#return exp(-im*k*r)/r
-	return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))#/(z-z0)
+	r = norm([x-x0, y-y0, z-z0]);
+	return exp(-im*k*r)/r
+	#return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))/(z-z0)
+end
+
+# ╔═╡ ca9fa26d-e6df-4583-9b1e-a6dd9d9d1056
+function gaussian_beam(x, y, s, origin, k)
+	x0, y0, z0 = origin;
+	z = s-z0;
+	r = norm([x-x0, y-y0]);
+	w0 = 0.001e-3;
+
+	zR = k*w0^2/2 # zR = pi*w0^2*n/lambda, assuming n=1, and k=2pi/lambda.
+	w(z) = w0 * sqrt(1 + (z/zR)^2); wz = w(z);
+	psi = atan(z/zR)
+	Rz = z*(1+(zR/z)^2)
+
+	return (w0/wz) * exp(-r^2/wz^2) * exp(-im * (k*z + k*(r^2/(2*Rz)) - psi))
+end
+
+# ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
+function beam_type(source_type)
+	@match source_type begin
+		"spherical" => return spherical_beam;
+		"gaussian"  => return gaussian_beam;
+	end;
 end
 
 # ╔═╡ db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
-function beam_generation(xv, yv, z, position_pair, input_wavelength_pair)
+function beam_generation(xv, yv, z, position_pair, input_wavelength_pair; source_type = "spherical")
+
+	beam_fun = beam_type(source_type);
+	
 	U₁_origin = position_pair[1];
 	U₂_origin = position_pair[2];
 	
@@ -275,8 +339,8 @@ function beam_generation(xv, yv, z, position_pair, input_wavelength_pair)
 	k₁ = 2*π/U₁_wavelength;
 	k₂ = 2*π/U₂_wavelength;
 	
-	U₁_amplitude = spherical_beam.(xv, yv', z, Ref(U₁_origin), k₁);
-	U₂_amplitude = conj.(spherical_beam.(xv, yv', z, Ref(U₂_origin), k₂));
+	U₁_amplitude = beam_fun.(xv, yv', z, Ref(U₁_origin), k₁);
+	U₂_amplitude = conj.(beam_fun.(xv, yv', z, Ref(U₂_origin), k₂));
 	
 	U₁ = Beam(U₁_amplitude, U₁_wavelength);
 	U₂ = Beam(U₂_amplitude, U₂_wavelength);
@@ -286,25 +350,6 @@ end
 
 # ╔═╡ 8d6e234b-319d-439d-83b2-52187b498af7
 begin
-	
-	rₒ₁ = source_width * sqrt.(rand(num_instances));
-	rₒ₂ = source_width * sqrt.(rand(num_instances));
-	θₒ₁ = 2*pi*rand(num_instances);
-	θₒ₂ = 2*pi*rand(num_instances);
-
-	xₒ₁ = rₒ₁ .* cos.(θₒ₁);
-	#xₒ₂ = rₒ₂ .* cos.(θₒ₂);
-	xₒ₂ = -xₒ₁;
-	yₒ₁ = rₒ₁ .* sin.(θₒ₁);
-	#yₒ₂ = rₒ₂ .* sin.(θₒ₂);
-	yₒ₂ = -yₒ₁;
-
-	
-	#xₒ₁ = source_width*randn(num_instances);
-	#xₒ₂ = source_width*randn(num_instances);
-	#yₒ₁ = source_width*randn(num_instances);
-	#yₒ₂ = source_width*randn(num_instances);
-
 	# Initialization
 	U₁_amplitude = 0*xv*yv';
 	U₂_amplitude = 0*xv*yv';
@@ -315,7 +360,7 @@ begin
 		# Simulation steps
 		
 		## spherical beams propagated z after origin
-		u₁, u₂ = beam_generation(xv, yv, zc, [(xₒ₁[i], yₒ₁[i], 0), (xₒ₂[i], yₒ₂[i], 0)], input_wavelength_pair);
+		u₁, u₂ = beam_generation(xv, yv, zc, [(xₒ₁[i], yₒ₁[i], 0), (xₒ₂[i], yₒ₂[i], 0)], input_wavelength_pair; source_type);
 
 		## mixing
 		u₃ = nonlinear_mixing(u₁, u₂, PPMgOLN_crystal, mode="strong_laser");
@@ -1781,28 +1826,33 @@ version = "1.8.1+0"
 # ╟─e0e37aed-2fc7-45e7-81f8-afc6a564ffda
 # ╟─673d87cd-f402-417a-b69c-5944ea1f86e8
 # ╠═6448d957-5f6f-4707-90ce-e270ccd3fc58
-# ╠═94e3db3c-4b2e-40c0-858b-49328b82d0ec
+# ╠═dad244a6-8fa2-4c02-8a55-14ccdef91a9c
 # ╠═8d6e234b-319d-439d-83b2-52187b498af7
 # ╟─abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
-# ╠═9fa04509-0d35-4abd-b26b-ae554881582a
+# ╟─9fa04509-0d35-4abd-b26b-ae554881582a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
 # ╟─13ff224b-781d-4452-a29d-c7cc95d78f15
 # ╟─5805c0b1-4277-47da-992e-8bc7f47e9191
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
 # ╟─c22c4017-12d4-4b29-8b27-443c40de5fb8
 # ╟─ef860f8e-40d5-41a0-a0c3-a9f453265568
-# ╠═d02c1740-35bb-11f0-0ec5-c7b9a0f7777c
-# ╠═9284076b-5020-4f14-bd2e-164562ec5cf1
+# ╟─d02c1740-35bb-11f0-0ec5-c7b9a0f7777c
+# ╟─9284076b-5020-4f14-bd2e-164562ec5cf1
 # ╟─4056458d-c27d-4829-8518-50badc8b412e
-# ╠═2cea089c-4463-4786-bc2e-83e93a321bfe
-# ╠═570fcbf9-5dac-4fbd-bd4a-58ad7aac37ef
+# ╟─2cea089c-4463-4786-bc2e-83e93a321bfe
+# ╟─570fcbf9-5dac-4fbd-bd4a-58ad7aac37ef
 # ╟─d94f8ea0-5dd7-4278-9538-8b2afc53637e
-# ╠═e1322a46-caea-4638-a35e-8cb2fe88de1b
+# ╟─e1322a46-caea-4638-a35e-8cb2fe88de1b
 # ╟─1fd147f1-a50f-4ecc-b50a-5250140c2466
 # ╟─caf88132-03b0-4e94-9276-a7396f11bfbe
-# ╠═db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
+# ╠═94e3db3c-4b2e-40c0-858b-49328b82d0ec
+# ╠═037d0699-c348-4c39-b12d-2e83af878e55
+# ╠═6a2ae328-0c2d-4bd0-aafd-ee3e65c4dbdb
+# ╠═1e077657-a56f-44c6-a51a-494e77353f8c
 # ╠═8d29d11c-736b-4692-9774-757793a497e3
+# ╠═ca9fa26d-e6df-4583-9b1e-a6dd9d9d1056
+# ╠═db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
 # ╟─eb90edf1-7f1b-40ca-9ee6-aabf2afb7e2c
-# ╠═887f855f-4d66-4efd-83e6-124e50889af7
+# ╟─887f855f-4d66-4efd-83e6-124e50889af7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

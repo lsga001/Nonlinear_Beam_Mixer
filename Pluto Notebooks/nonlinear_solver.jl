@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.6
+# v0.20.8
 
 using Markdown
 using InteractiveUtils
@@ -14,6 +14,7 @@ begin
 	using Match
 	using LaTeXStrings
 	using Random
+	using Bessels
 end
 
 # ╔═╡ a64a74e9-d5eb-478f-803a-61c94c14fbc6
@@ -177,7 +178,7 @@ function NLM_strong_laser(input_beam::Beam, pump_beam::Beam, crystal::Crystal, m
 	#println("suggested crystal length z: ", maximum(real.(za)));
 
 	# Equation 2.6.24 Boyd, Nonlinear Optics 4th edition
-	A₃ = (K₃ ./ g) .* A₁ .* sin.(g*z) .* exp.(0.5*im*Δk*z);
+	A₃ = (K₃ ./ g) .* A₁ .* sin.(g*z) .* exp(0.5*im*Δk*z);
 	
 	return Beam(A₃, ω₃)
 end
@@ -215,7 +216,6 @@ end
 begin
 	# Numerical window
 	N = 2^8;
-	source_width = 0.5e-3;
 	#xv = 3*source_width*range(-1,1,length=N);
 	#yv = 3*source_width*range(-1,1,length=N);
 	xv = 3e-3*range(-1,1,length=N);
@@ -227,6 +227,8 @@ begin
 	λ₂ = 1310e-9;
 	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
 	input_wavelength_pair = [λ₁, λ₂];
+	source_width = 0.5e-3;
+	gaussian_beam_waist = 0.1e-3; # if applicable
 
 	# Periodically-poled MgO-coated Lithium Niobate (PPMgOLN)
 	# is a negative uniaxial crystal.
@@ -238,7 +240,38 @@ begin
 	num_instances = 1000;
 	distribution_type = "circular";
 	source_type = "spherical";
-end
+end;
+
+# ╔═╡ 921a8708-64aa-45b7-80aa-8d951575acef
+begin
+	## Uniform circle analytical parameters and functions
+
+	a = source_width;
+	k = 2*pi/λ₁; # why not λ₃? Because in the analytical develop we used k from U1 and U2 and assumed they were equal. That k is that one.
+	rv = abs.(xv .+ im*yv');
+	jinc(x) = 2*besselj1(x)/x;
+	CCF₁ = jinc.(2*k*a*rv/zc) / zc^2;
+end;
+
+# ╔═╡ 6dfde201-6e4e-4850-886a-d1e145be24a9
+begin
+	# Gaussian with Gaussian
+	w0 = gaussian_beam_waist;
+	δ = source_width;
+
+	zR = k*w0^2/2 # zR = pi*w0^2*n/lambda, assuming n=1, and k=2pi/lambda.
+	w(x) = w0 * sqrt(1 + (x/zR)^2); wz = w(zc);
+
+	d = 4*δ^2 + wz^2;
+	
+	CCF₂ = (wz^2/d) * exp.(-2*rv.^2/d) .* exp.(-8*δ^2*rv.^2/(d*wz^2));
+end;
+
+# ╔═╡ 6042b222-c499-41fc-bbc6-81be835a1832
+begin
+	σ = source_width;
+	CCF₃ = exp.(-2*k^2*σ^2*rv.^2/zc^2) /zc^2;
+end;
 
 # ╔═╡ 1fd147f1-a50f-4ecc-b50a-5250140c2466
 md"""
@@ -292,36 +325,38 @@ end
 # ╔═╡ dad244a6-8fa2-4c02-8a55-14ccdef91a9c
 begin
 	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
-end
+end;
 
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
 	x0, y0, z0 = origin;
-	r = norm([x-x0, y-y0, z-z0]);
-	return exp(-im*k*r)/r
-	#return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))/(z-z0)
+	#r = norm([x-x0, y-y0, z-z0]);
+	#return exp(-im*k*r)/r
+	return exp(-im*k*(z-z0))*exp(-im*k*((x-x0)^2 + (y-y0)^2)/(2*(z-z0)))/(z-z0);
 end
 
 # ╔═╡ ca9fa26d-e6df-4583-9b1e-a6dd9d9d1056
-function gaussian_beam(x, y, s, origin, k)
+function gaussian_beam(x, y, s, origin, k, w0)
 	x0, y0, z0 = origin;
 	z = s-z0;
 	r = norm([x-x0, y-y0]);
-	w0 = 0.001e-3;
 
 	zR = k*w0^2/2 # zR = pi*w0^2*n/lambda, assuming n=1, and k=2pi/lambda.
 	w(z) = w0 * sqrt(1 + (z/zR)^2); wz = w(z);
-	psi = atan(z/zR)
-	Rz = z*(1+(zR/z)^2)
+	psi = atan(z/zR);
+	Rz = z*(1+(zR/z)^2);
 
-	return (w0/wz) * exp(-r^2/wz^2) * exp(-im * (k*z + k*(r^2/(2*Rz)) - psi))
+	return (w0/wz) * exp(-r^2/wz^2) * exp(-im * (k*z + k*(r^2/(2*Rz)) - psi));
 end
+
+# ╔═╡ d9cab97b-b7c6-4d65-8c01-b141405fe361
+gauss_beam = (x, y, s, origin, k) -> gaussian_beam(x, y, s, origin, k, gaussian_beam_waist);
 
 # ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
 function beam_type(source_type)
 	@match source_type begin
 		"spherical" => return spherical_beam;
-		"gaussian"  => return gaussian_beam;
+		"gaussian"  => return gauss_beam;
 	end;
 end
 
@@ -378,7 +413,7 @@ begin
 	U₁ = Beam(U₁_amplitude, λ₁);
 	U₂ = Beam(U₂_amplitude, λ₂);
 	U₃ = Beam(U₃_amplitude, λ₃);
-end
+end;
 
 # ╔═╡ abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
 begin
@@ -402,8 +437,8 @@ function plot_beam(U, xv, yv, my_title)
 	phase_color = :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256
 	#phase_color = :bamO
 	plot(
-		heatmap(xv, yv, abs2.(U.amplitude), aspect_ratio=:equal, title="Amplitude"), 
-		heatmap(xv, yv, angle.(U.amplitude), aspect_ratio=:equal, title="Phase", clims=(-pi,pi), colormap=phase_color),
+		heatmap(xv, yv, abs2.(U), aspect_ratio=:equal, title="Amplitude"), 
+		heatmap(xv, yv, angle.(U), aspect_ratio=:equal, title="Phase", clims=(-pi,pi), colormap=phase_color),
 		layout = @layout([B C]),
 		plot_title=my_title,
 		plot_titlevspan=0.1
@@ -412,22 +447,38 @@ end
 
 # ╔═╡ a1e1ea41-4f55-411b-ab9b-3a575d039440
 begin
-	plot_beam(U₁, xv, yv, "Input beam 1 just before crystal")
+	plot_beam(U₁.amplitude, xv, yv, "Input beam 1 just before crystal")
 end
 
 # ╔═╡ 13ff224b-781d-4452-a29d-c7cc95d78f15
 begin
-	plot_beam(U₂, xv, yv, "Input beam 2 just before crystal")
+	plot_beam(U₂.amplitude, xv, yv, "Input beam 2 just before crystal")
 end
 
 # ╔═╡ 5805c0b1-4277-47da-992e-8bc7f47e9191
 begin
-	plot_beam(U₃, xv, yv, "Output beam after crystal")
+	plot_beam(U₃.amplitude, xv, yv, "Output beam after crystal")
+end
+
+# ╔═╡ 6334472d-4252-47fa-a794-bdd030886d22
+begin
+	plot_beam(CCF₁, xv, yv, "Analytical uniform circular")
+end
+
+# ╔═╡ bcd52157-ce5a-449c-bd37-60f0f6999a4e
+begin
+	plot_beam(CCF₂, xv, yv, "Analytical gaussian gaussian")
+end
+
+# ╔═╡ 707faa01-9059-4e08-bf6d-1814fd16a7c2
+begin
+	plot_beam(CCF₃, xv, yv, "Analytical gaussian dist. spherical cen.")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Match = "7eb4fadd-790c-5f42-8a69-bfa0b872bfbf"
@@ -438,6 +489,7 @@ Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 StructuredLight = "13204c95-a6e5-4c09-8c7b-ee09b09e0944"
 
 [compat]
+Bessels = "~0.2.8"
 LaTeXStrings = "~1.4.0"
 Match = "~2.4.0"
 Plots = "~1.40.13"
@@ -452,7 +504,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.7"
 manifest_format = "2.0"
-project_hash = "01831579ba06020104895596caeef287d0aacba4"
+project_hash = "e91869a3e5f3c7ca56094c996d34532c6973f296"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1828,18 +1880,24 @@ version = "1.8.1+0"
 # ╠═6448d957-5f6f-4707-90ce-e270ccd3fc58
 # ╠═dad244a6-8fa2-4c02-8a55-14ccdef91a9c
 # ╠═8d6e234b-319d-439d-83b2-52187b498af7
-# ╟─abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
-# ╟─9fa04509-0d35-4abd-b26b-ae554881582a
+# ╠═921a8708-64aa-45b7-80aa-8d951575acef
+# ╠═6dfde201-6e4e-4850-886a-d1e145be24a9
+# ╠═6042b222-c499-41fc-bbc6-81be835a1832
+# ╠═abbd89d5-c7cc-4a3b-a84e-cd587e5ede46
+# ╠═9fa04509-0d35-4abd-b26b-ae554881582a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
 # ╟─13ff224b-781d-4452-a29d-c7cc95d78f15
 # ╟─5805c0b1-4277-47da-992e-8bc7f47e9191
+# ╠═6334472d-4252-47fa-a794-bdd030886d22
+# ╠═bcd52157-ce5a-449c-bd37-60f0f6999a4e
+# ╠═707faa01-9059-4e08-bf6d-1814fd16a7c2
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
 # ╟─c22c4017-12d4-4b29-8b27-443c40de5fb8
 # ╟─ef860f8e-40d5-41a0-a0c3-a9f453265568
 # ╟─d02c1740-35bb-11f0-0ec5-c7b9a0f7777c
 # ╟─9284076b-5020-4f14-bd2e-164562ec5cf1
 # ╟─4056458d-c27d-4829-8518-50badc8b412e
-# ╟─2cea089c-4463-4786-bc2e-83e93a321bfe
+# ╠═2cea089c-4463-4786-bc2e-83e93a321bfe
 # ╟─570fcbf9-5dac-4fbd-bd4a-58ad7aac37ef
 # ╟─d94f8ea0-5dd7-4278-9538-8b2afc53637e
 # ╟─e1322a46-caea-4638-a35e-8cb2fe88de1b
@@ -1851,6 +1909,7 @@ version = "1.8.1+0"
 # ╠═1e077657-a56f-44c6-a51a-494e77353f8c
 # ╠═8d29d11c-736b-4692-9774-757793a497e3
 # ╠═ca9fa26d-e6df-4583-9b1e-a6dd9d9d1056
+# ╠═d9cab97b-b7c6-4d65-8c01-b141405fe361
 # ╠═db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
 # ╟─eb90edf1-7f1b-40ca-9ee6-aabf2afb7e2c
 # ╟─887f855f-4d66-4efd-83e6-124e50889af7

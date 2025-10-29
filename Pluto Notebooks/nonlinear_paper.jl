@@ -71,6 +71,14 @@ md"""
 ### Nonlinear mixing auxiliary code
 """
 
+# ╔═╡ 2cea089c-4463-4786-bc2e-83e93a321bfe
+function nonlinear_mixing(U₁::Beam, U₂::Beam, crystal::Crystal; mode="sfg")
+	@match mode begin
+		"sfg" 			=> return NLM_sum_frequency_generation(U₁, U₂, crystal)
+		"strong_laser" 	=> return NLM_strong_laser(U₁, U₂, crystal)
+	end;
+end
+
 # ╔═╡ 570fcbf9-5dac-4fbd-bd4a-58ad7aac37ef
 function NLM_strong_laser(input_beam::Beam, pump_beam::Beam, crystal::Crystal, mode="strong_laser")
 	## variable initialization
@@ -137,14 +145,6 @@ end
 function NLM_sum_frequency_generation(U₁::Beam, U₂::Beam, crystal::Crystal)
 	
 	return output
-end
-
-# ╔═╡ 2cea089c-4463-4786-bc2e-83e93a321bfe
-function nonlinear_mixing(U₁::Beam, U₂::Beam, crystal::Crystal; mode="sfg")
-	@match mode begin
-		"sfg" 			=> return NLM_sum_frequency_generation(U₁, U₂, crystal)
-		"strong_laser" 	=> return NLM_strong_laser(U₁, U₂, crystal)
-	end;
 end
 
 # ╔═╡ e1322a46-caea-4638-a35e-8cb2fe88de1b
@@ -226,6 +226,31 @@ md"""
 ### Beam generation auxiliary code
 """
 
+# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
+function generate_source_points(source_width, num_instances; distribution_type="circular")
+	@match distribution_type begin
+		"circular" 	=> return circular_distribution(source_width, num_instances)
+		"gaussian" 	=> return gaussian_distribution(source_width, num_instances)
+	end;
+end
+
+# ╔═╡ 4bde5076-4073-4ee7-b363-915f2194695c
+begin
+	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
+
+	if num_instances == 1
+		xₒ₁ = 0; xₒ₂ = 0; yₒ₁ = 0; yₒ₂ = 0;
+	end
+end;
+
+# ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
+function beam_type(source_type)
+	@match source_type begin
+		"spherical" => return spherical_beam;
+		"gaussian"  => return gauss_beam;
+	end;
+end
+
 # ╔═╡ 6a2ae328-0c2d-4bd0-aafd-ee3e65c4dbdb
 function circular_distribution(source_width, num_instances)
 	Random.seed!(1234)
@@ -262,23 +287,6 @@ function gaussian_distribution(source_width, num_instances)
 	
 	return x₁, y₁, x₂, y₂
 end
-
-# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
-function generate_source_points(source_width, num_instances; distribution_type="circular")
-	@match distribution_type begin
-		"circular" 	=> return circular_distribution(source_width, num_instances)
-		"gaussian" 	=> return gaussian_distribution(source_width, num_instances)
-	end;
-end
-
-# ╔═╡ 4bde5076-4073-4ee7-b363-915f2194695c
-begin
-	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
-
-	if num_instances == 1
-		xₒ₁ = 0; xₒ₂ = 0; yₒ₁ = 0; yₒ₂ = 0;
-	end
-end;
 
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
@@ -362,14 +370,6 @@ end
 
 # ╔═╡ d9cab97b-b7c6-4d65-8c01-b141405fe361
 gauss_beam = (x, y, s, origin, k) -> gaussian_beam(x, y, s, origin, k, gaussian_beam_waist);
-
-# ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
-function beam_type(source_type)
-	@match source_type begin
-		"spherical" => return spherical_beam;
-		"gaussian"  => return gauss_beam;
-	end;
-end
 
 # ╔═╡ db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
 function beam_generation(xv, yv, z, position_pair, input_wavelength_pair; source_type = "spherical")

@@ -71,14 +71,6 @@ md"""
 ### Nonlinear mixing auxiliary code
 """
 
-# ╔═╡ 2cea089c-4463-4786-bc2e-83e93a321bfe
-function nonlinear_mixing(U₁::Beam, U₂::Beam, crystal::Crystal; mode="sfg")
-	@match mode begin
-		"sfg" 			=> return NLM_sum_frequency_generation(U₁, U₂, crystal)
-		"strong_laser" 	=> return NLM_strong_laser(U₁, U₂, crystal)
-	end;
-end
-
 # ╔═╡ 570fcbf9-5dac-4fbd-bd4a-58ad7aac37ef
 function NLM_strong_laser(input_beam::Beam, pump_beam::Beam, crystal::Crystal, mode="strong_laser")
 	## variable initialization
@@ -147,6 +139,14 @@ function NLM_sum_frequency_generation(U₁::Beam, U₂::Beam, crystal::Crystal)
 	return output
 end
 
+# ╔═╡ 2cea089c-4463-4786-bc2e-83e93a321bfe
+function nonlinear_mixing(U₁::Beam, U₂::Beam, crystal::Crystal; mode="sfg")
+	@match mode begin
+		"sfg" 			=> return NLM_sum_frequency_generation(U₁, U₂, crystal)
+		"strong_laser" 	=> return NLM_strong_laser(U₁, U₂, crystal)
+	end;
+end
+
 # ╔═╡ e1322a46-caea-4638-a35e-8cb2fe88de1b
 function PPMgOLN_n_refraction(lambda; temperature=25, axis="extraordinary")
 	f = (temperature-24.5)*(temperature+570.82);
@@ -195,10 +195,10 @@ begin
 	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
 	input_wavelength_pair = [λ₁, λ₂];
 	source_width = 20e-6;
-	gaussian_beam_waist = 30e-6;
+	gaussian_beam_waist = 60e-6;
 	P = 50e-3; # Beam power [W]
 	
-	p₁ = 0; l₁ = 1; p₂ = 7; l₂ = 2;
+	p₁ = 5; l₁ = 3; p₂ = 2; l₂ = 5;
 
 	# lenses
 	f₁ = 750e-3;
@@ -211,7 +211,7 @@ begin
 	crystal = Crystal(PPKTP_d_eff, PPKTP_n_refraction, PPKTP_length);
 
 	# Ensemble behavior
-	num_instances = 10;
+	num_instances = 100;
 	distribution_type = "circular";
 	source_type = "gaussian";
 end;
@@ -225,31 +225,6 @@ md"""
 md"""
 ### Beam generation auxiliary code
 """
-
-# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
-function generate_source_points(source_width, num_instances; distribution_type="circular")
-	@match distribution_type begin
-		"circular" 	=> return circular_distribution(source_width, num_instances)
-		"gaussian" 	=> return gaussian_distribution(source_width, num_instances)
-	end;
-end
-
-# ╔═╡ 4bde5076-4073-4ee7-b363-915f2194695c
-begin
-	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
-
-	if num_instances == 1
-		xₒ₁ = 0; xₒ₂ = 0; yₒ₁ = 0; yₒ₂ = 0;
-	end
-end;
-
-# ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
-function beam_type(source_type)
-	@match source_type begin
-		"spherical" => return spherical_beam;
-		"gaussian"  => return gauss_beam;
-	end;
-end
 
 # ╔═╡ 6a2ae328-0c2d-4bd0-aafd-ee3e65c4dbdb
 function circular_distribution(source_width, num_instances)
@@ -287,6 +262,23 @@ function gaussian_distribution(source_width, num_instances)
 	
 	return x₁, y₁, x₂, y₂
 end
+
+# ╔═╡ 94e3db3c-4b2e-40c0-858b-49328b82d0ec
+function generate_source_points(source_width, num_instances; distribution_type="circular")
+	@match distribution_type begin
+		"circular" 	=> return circular_distribution(source_width, num_instances)
+		"gaussian" 	=> return gaussian_distribution(source_width, num_instances)
+	end;
+end
+
+# ╔═╡ 4bde5076-4073-4ee7-b363-915f2194695c
+begin
+	xₒ₁, yₒ₁, xₒ₂, yₒ₂ = generate_source_points(source_width, num_instances; distribution_type);
+
+	if num_instances == 1
+		xₒ₁ = 0; xₒ₂ = 0; yₒ₁ = 0; yₒ₂ = 0;
+	end
+end;
 
 # ╔═╡ 8d29d11c-736b-4692-9774-757793a497e3
 function spherical_beam(x, y, z, origin, k)
@@ -371,6 +363,14 @@ end
 # ╔═╡ d9cab97b-b7c6-4d65-8c01-b141405fe361
 gauss_beam = (x, y, s, origin, k) -> gaussian_beam(x, y, s, origin, k, gaussian_beam_waist);
 
+# ╔═╡ 037d0699-c348-4c39-b12d-2e83af878e55
+function beam_type(source_type)
+	@match source_type begin
+		"spherical" => return spherical_beam;
+		"gaussian"  => return gauss_beam;
+	end;
+end
+
 # ╔═╡ db0bcb3d-1acf-48f9-83a0-9fc23ffa7575
 function beam_generation(xv, yv, z, position_pair, input_wavelength_pair; source_type = "spherical")
 
@@ -421,12 +421,15 @@ begin
 	U₁_amplitude = 0*xv*yv';
 	U₂_amplitude = 0*xv*yv';
 	U₃_amplitude = 0*xv*yv';
-	I₁_amplitude = 0*xv*yv';
-	I₂_amplitude = 0*xv*yv';
-	I₃_amplitude = 0*xv*yv';
+	I₁ = 0*xv*yv';
+	I₂ = 0*xv*yv';
+	I₃ = 0*xv*yv';
 	M₁_amplitude = 0*xv*yv';
 	M₂_amplitude = 0*xv*yv';
 	M₃_amplitude = 0*xv*yv';
+	IM₁ = 0*xv*yv';
+	IM₂ = 0*xv*yv';
+	IM₃ = 0*xv*yv';
 	
 	for i in 1:num_instances
 		# Simulation steps
@@ -446,20 +449,20 @@ begin
 		## filtering
 		### does nothing since we don't need to in simulation
 		filtering();
-
-		i₁ = abs2.(u₁.amplitude);
-		i₂ = abs2.(u₂.amplitude);
 	
 		## ensemble averages
 		U₁_amplitude += u₁.amplitude / num_instances;
 		U₂_amplitude += u₂.amplitude / num_instances;
 		U₃_amplitude += u₃.amplitude / num_instances;
-		I₁_amplitude += abs2.(u₁.amplitude) / num_instances;
-		I₂_amplitude += abs2.(u₂.amplitude) / num_instances;
-		I₃_amplitude += abs2.(u₃.amplitude) / num_instances;
+		I₁ += abs2.(u₁.amplitude) / num_instances;
+		I₂ += abs2.(u₂.amplitude) / num_instances;
+		I₃ += abs2.(u₃.amplitude) / num_instances;
 		M₁_amplitude += m₁.amplitude / num_instances;
 		M₂_amplitude += m₂.amplitude / num_instances;
 		M₃_amplitude += m₃.amplitude / num_instances;
+		IM₁ += abs2.(m₁.amplitude) / num_instances;
+		IM₂ += abs2.(m₂.amplitude) / num_instances;
+		IM₃ += abs2.(m₃.amplitude) / num_instances;
 	end
 	
 	U₁ = Beam(U₁_amplitude, λ₁);
@@ -472,13 +475,13 @@ end;
 
 # ╔═╡ ab474e5c-8821-4515-9c10-934d156e9938
 begin
-	heatmap(xv, yv, I₁_amplitude, aspect_ratio=:equal, size=(600,550), right_margin=15Plots.mm, title="<U_1(r)^* U_1(r)> just after SLM")
+	heatmap(xv, yv, I₁, aspect_ratio=:equal, size=(600,550), right_margin=15Plots.mm, title=L"$\left\langle U_1^*(\vec{r}) U_1(\vec{r})\right\rangle$ just after SLM")
 	scatter!((xₒ₁, yₒ₁))
 end
 
 # ╔═╡ 3912e570-1ad2-4da7-ad5c-18462387f87a
 begin
-	heatmap(xv, yv, I₂_amplitude, aspect_ratio=:equal, size=(600,550), right_margin=15Plots.mm, title="Input beam 2 just after SLM")
+	heatmap(xv, yv, I₂, aspect_ratio=:equal, size=(600,550), right_margin=15Plots.mm, title=L"$\left\langle U_2^*(\vec{r}) U_2(\vec{r})\right\rangle$ just after SLM")
 	scatter!((xₒ₂, yₒ₂))
 end
 
@@ -488,12 +491,12 @@ md"""
 """
 
 # ╔═╡ 887f855f-4d66-4efd-83e6-124e50889af7
-function plot_beam(U, xv, yv, my_title)
+function plot_beam(intensity, phase, xv, yv, my_title)
 	phase_color = :cyclic_protanopic_deuteranopic_bwyk_16_96_c31_n256
 	#phase_color = :bamO
 	plot(
-		heatmap(xv, yv, abs2.(U), aspect_ratio=:equal, title="Amplitude"), 
-		heatmap(xv, yv, angle.(U), aspect_ratio=:equal, title="Phase", clims=(-pi,pi), colormap=phase_color),
+		heatmap(xv, yv, intensity, aspect_ratio=:equal, title="Intensity"), 
+		heatmap(xv, yv, phase, aspect_ratio=:equal, title="Phase", clims=(-pi,pi), colormap=phase_color),
 		layout = @layout([B C]),
 		plot_title=my_title,
 		plot_titlevspan=0.1
@@ -501,33 +504,39 @@ function plot_beam(U, xv, yv, my_title)
 end
 
 # ╔═╡ a1e1ea41-4f55-411b-ab9b-3a575d039440
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	plot_beam(U₁.amplitude, xv, yv, "Input beam 1 just after SLM")
 end
+  ╠═╡ =#
 
 # ╔═╡ 13ff224b-781d-4452-a29d-c7cc95d78f15
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 	plot_beam(U₂.amplitude, xv, yv, "Input beam 2 just after SLM")
 end
+  ╠═╡ =#
 
 # ╔═╡ f383d81b-9810-4059-ae85-5e2b5f508d19
 begin
-	plot_beam(M₁.amplitude, xv*f₁*λ₁, yv*f₁*λ₁, "Input beam 1 just before crystal")
+	plot_beam(IM₁, angle.(M₁.amplitude), xv*f₁*λ₁, yv*f₁*λ₁, "Input beam 1 just before crystal")
 end
 
 # ╔═╡ 7445c83d-83bf-45dd-a05a-a97e55dfe9d7
 begin
-	plot_beam(M₂.amplitude, xv*f₁*λ₂, yv*f₁*λ₂, "Input beam 2 just before crystal")
+	plot_beam(IM₂, angle.(M₂.amplitude), xv*f₁*λ₂, yv*f₁*λ₂, "Input beam 2 just before crystal")
 end
 
 # ╔═╡ 1d0b4e4a-ccec-4177-bd94-c5a2064393da
 begin
-	plot_beam(M₃.amplitude, xv*f₂*λ₃, yv*f₂*λ₃, "Output beam just after crystal")
+	plot_beam(IM₃, angle.(M₃.amplitude), xv*f₂*λ₃, yv*f₂*λ₃, "Output beam just after crystal")
 end
 
 # ╔═╡ 5805c0b1-4277-47da-992e-8bc7f47e9191
 begin
-	plot_beam(U₃.amplitude, xv, yv, "Output beam at detector")
+	plot_beam(I₃, angle.(U₃.amplitude), xv, yv, "Output beam at detector")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2187,12 +2196,12 @@ version = "1.8.1+0"
 # ╠═c9297957-897e-40ad-9ba7-a421548b6eba
 # ╠═4bde5076-4073-4ee7-b363-915f2194695c
 # ╠═8d6e234b-319d-439d-83b2-52187b498af7
-# ╠═ab474e5c-8821-4515-9c10-934d156e9938
-# ╠═3912e570-1ad2-4da7-ad5c-18462387f87a
-# ╠═a1e1ea41-4f55-411b-ab9b-3a575d039440
+# ╟─ab474e5c-8821-4515-9c10-934d156e9938
+# ╟─3912e570-1ad2-4da7-ad5c-18462387f87a
+# ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
 # ╠═13ff224b-781d-4452-a29d-c7cc95d78f15
-# ╠═f383d81b-9810-4059-ae85-5e2b5f508d19
-# ╠═7445c83d-83bf-45dd-a05a-a97e55dfe9d7
+# ╟─f383d81b-9810-4059-ae85-5e2b5f508d19
+# ╟─7445c83d-83bf-45dd-a05a-a97e55dfe9d7
 # ╠═1d0b4e4a-ccec-4177-bd94-c5a2064393da
 # ╠═5805c0b1-4277-47da-992e-8bc7f47e9191
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
@@ -2220,6 +2229,6 @@ version = "1.8.1+0"
 # ╟─7992697f-25bc-40c8-b336-7ae4e90f3d25
 # ╠═6f671627-5891-4c48-8af9-db29f3ca0476
 # ╟─eb90edf1-7f1b-40ca-9ee6-aabf2afb7e2c
-# ╟─887f855f-4d66-4efd-83e6-124e50889af7
+# ╠═887f855f-4d66-4efd-83e6-124e50889af7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -33,6 +33,22 @@ The efficient creation and detection of spatial modes of light has become topica
 
 """
 
+# ╔═╡ a1e1ea41-4f55-411b-ab9b-3a575d039440
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	plot_beam(U₁.amplitude, xv, yv, "Input beam 1 just after SLM")
+end
+  ╠═╡ =#
+
+# ╔═╡ 13ff224b-781d-4452-a29d-c7cc95d78f15
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	plot_beam(U₂.amplitude, xv, yv, "Input beam 2 just after SLM")
+end
+  ╠═╡ =#
+
 # ╔═╡ 4227a905-cb4e-40da-8b15-df73c9184480
 function filtering()
 end
@@ -194,11 +210,11 @@ begin
 	λ₂ = 806e-9;
 	λ₃ = (λ₁^-1 + λ₂^-1)^-1;
 	input_wavelength_pair = [λ₁, λ₂];
-	source_width = 20e-6;
-	gaussian_beam_waist = 60e-6;
+	source_width = 30e-6;
+	gaussian_beam_waist = 40e-6;
 	P = 50e-3; # Beam power [W]
 	
-	p₁ = 5; l₁ = 3; p₂ = 2; l₂ = 5;
+	p₁ = 0; l₁ = 1; p₂ = 4; l₂ = 1;
 
 	# lenses
 	f₁ = 750e-3;
@@ -503,25 +519,9 @@ function plot_beam(intensity, phase, xv, yv, my_title)
 	)
 end
 
-# ╔═╡ a1e1ea41-4f55-411b-ab9b-3a575d039440
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	plot_beam(U₁.amplitude, xv, yv, "Input beam 1 just after SLM")
-end
-  ╠═╡ =#
-
-# ╔═╡ 13ff224b-781d-4452-a29d-c7cc95d78f15
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	plot_beam(U₂.amplitude, xv, yv, "Input beam 2 just after SLM")
-end
-  ╠═╡ =#
-
 # ╔═╡ f383d81b-9810-4059-ae85-5e2b5f508d19
 begin
-	plot_beam(IM₁, angle.(M₁.amplitude), xv*f₁*λ₁, yv*f₁*λ₁, "Input beam 1 just before crystal")
+	plot_beam(IM₁, angle.(M₁.amplitude), xv*f₁*λ₁, yv*f₁*λ₁, L"$\langle\mathcal{F}[U_1]^*\mathcal{F}[U_1]\rangle$ just before crystal")
 end
 
 # ╔═╡ 7445c83d-83bf-45dd-a05a-a97e55dfe9d7
@@ -2196,13 +2196,13 @@ version = "1.8.1+0"
 # ╠═c9297957-897e-40ad-9ba7-a421548b6eba
 # ╠═4bde5076-4073-4ee7-b363-915f2194695c
 # ╠═8d6e234b-319d-439d-83b2-52187b498af7
-# ╟─ab474e5c-8821-4515-9c10-934d156e9938
+# ╠═ab474e5c-8821-4515-9c10-934d156e9938
 # ╟─3912e570-1ad2-4da7-ad5c-18462387f87a
 # ╟─a1e1ea41-4f55-411b-ab9b-3a575d039440
-# ╠═13ff224b-781d-4452-a29d-c7cc95d78f15
-# ╟─f383d81b-9810-4059-ae85-5e2b5f508d19
+# ╟─13ff224b-781d-4452-a29d-c7cc95d78f15
+# ╠═f383d81b-9810-4059-ae85-5e2b5f508d19
 # ╟─7445c83d-83bf-45dd-a05a-a97e55dfe9d7
-# ╠═1d0b4e4a-ccec-4177-bd94-c5a2064393da
+# ╟─1d0b4e4a-ccec-4177-bd94-c5a2064393da
 # ╠═5805c0b1-4277-47da-992e-8bc7f47e9191
 # ╟─4227a905-cb4e-40da-8b15-df73c9184480
 # ╟─c22c4017-12d4-4b29-8b27-443c40de5fb8
